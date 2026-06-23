@@ -164,8 +164,22 @@ def download(fname):
         return dst
     url = CDN + fname
     print(f"  downloading {fname}")
-    urllib.request.urlretrieve(url, dst)
-    return dst
+    last = None
+    for attempt in range(5):
+        try:
+            req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+            with urllib.request.urlopen(req, timeout=120) as r:
+                data = r.read()
+            total = r.headers.get("Content-Length")
+            if total and len(data) < int(total):
+                raise IOError(f"incomplete: {len(data)}/{total}")
+            with open(dst, "wb") as fh:
+                fh.write(data)
+            return dst
+        except Exception as e:  # noqa
+            last = e
+            print(f"    retry {attempt + 1}/5 ({e})")
+    raise RuntimeError(f"failed to download {fname}: {last}")
 
 
 def run(cmd):

@@ -1,0 +1,7 @@
+# Build artifacts produced by build_video.py — regenerate with the script
+assets/
+clips/
+*.mp4
+*.m4a
+video_list.txt
+audio_list.txt
