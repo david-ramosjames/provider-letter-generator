@@ -17,13 +17,25 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_SUPABASE_URL = "https://mcczpwrmzemlqfsupquw.supabase.co"
 SUPABASE_URL = os.environ.get("SUPABASE_URL", DEFAULT_SUPABASE_URL).rstrip("/")
-# Accept either name; service role or anon key both work for a read.
+# Prefer the secret key (server-side, bypasses RLS); fall back to the
+# publishable key, then the legacy JWT-based names.
 SUPABASE_KEY = (
-    os.environ.get("SUPABASE_KEY")
+    os.environ.get("SUPABASE_SECRET_KEY")
+    or os.environ.get("SUPABASE_PUBLISHABLE_KEY")
+    or os.environ.get("SUPABASE_KEY")
     or os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
     or os.environ.get("SUPABASE_ANON_KEY")
     or ""
 )
+
+
+def _auth_headers(key: str) -> dict:
+    # New sb_secret_/sb_publishable_ keys are not JWTs and are rejected in the
+    # Authorization header; only legacy JWT keys go there too.
+    headers = {"apikey": key}
+    if not key.startswith(("sb_secret_", "sb_publishable_")):
+        headers["Authorization"] = f"Bearer {key}"
+    return headers
 
 
 @dataclass
@@ -62,7 +74,7 @@ def lookup_case(case_number: str) -> CaseRecord:
         return record
     if not SUPABASE_KEY:
         record.error = (
-            "Supabase key not configured (set SUPABASE_KEY). "
+            "Supabase key not configured (set SUPABASE_SECRET_KEY). "
             "Enter case fields manually."
         )
         return record
@@ -73,11 +85,7 @@ def lookup_case(case_number: str) -> CaseRecord:
         "select": "case_number,client_name,date_of_incident,date_of_birth",
         "limit": "1",
     }
-    headers = {
-        "apikey": SUPABASE_KEY,
-        "Authorization": f"Bearer {SUPABASE_KEY}",
-        "Accept": "application/json",
-    }
+    headers = {**_auth_headers(SUPABASE_KEY), "Accept": "application/json"}
     try:
         resp = httpx.get(url, params=params, headers=headers, timeout=15.0)
         resp.raise_for_status()

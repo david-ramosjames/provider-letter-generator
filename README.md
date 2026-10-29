@@ -53,7 +53,8 @@ Copy `.env.example` to `.env` and fill in:
 | `ANTHROPIC_API_KEY` | Enables AI extraction (recommended). |
 | `ANTHROPIC_MODEL` | Optional model override. Default `claude-opus-4-8`. |
 | `SUPABASE_URL` | Supabase project URL. |
-| `SUPABASE_KEY` | Service-role or anon key with read access to `cases`. |
+| `SUPABASE_SECRET_KEY` | Supabase secret key (`sb_secret_...`). Preferred; server-side only. |
+| `SUPABASE_PUBLISHABLE_KEY` | Supabase publishable key (`sb_publishable_...`). Used if no secret key is set; needs RLS read access to `cases`. |
 
 ## Run locally
 
